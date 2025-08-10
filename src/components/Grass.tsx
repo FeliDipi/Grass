@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useControls } from "../store/useControls";
+import {
+  sampleGeometrySurface,
+  quaternionFromUpToNormal,
+} from "../utils/sampleGeometry";
 import vertexShader from "../shaders/grass.vert.glsl?raw";
 import fragmentShader from "../shaders/grass.frag.glsl?raw";
 
@@ -16,7 +20,11 @@ interface GrassMaterialUniforms {
   uCurvature: { value: number };
 }
 
-export const Grass: React.FC = () => {
+interface GrassProps {
+  sourceGeometry?: THREE.BufferGeometry | null;
+}
+
+export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
   const {
     bladeCount,
     patchSize,
@@ -28,9 +36,10 @@ export const Grass: React.FC = () => {
     colorTop,
     curvature,
     timeScale,
+    followNormals,
   } = useControls();
   const meshRef = useRef<THREE.Mesh>(null!);
-  const materialRef = useRef<THREE.ShaderMaterial>(null!);
+  const materialRef = useRef<THREE.RawShaderMaterial>(null!);
   const clockRef = useRef(0);
 
   const { geometry, uniforms } = useMemo(() => {
@@ -47,15 +56,50 @@ export const Grass: React.FC = () => {
     const offsets = new Float32Array(bladeCount * 3);
     const scales = new Float32Array(bladeCount);
     const sway = new Float32Array(bladeCount);
+    const quats = new Float32Array(bladeCount * 4);
+
+    let sampled: { positions: Float32Array; normals: Float32Array } | null =
+      null;
+    if (sourceGeometry) {
+      try {
+        sampled = sampleGeometrySurface(sourceGeometry, bladeCount);
+      } catch (e) {
+        console.warn("Sampling failed, falling back to plane distribution", e);
+      }
+    }
+
+    const tmpNormal = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+
     for (let i = 0; i < bladeCount; i++) {
-      const xi = (Math.random() - 0.5) * patchSize;
-      const zi = (Math.random() - 0.5) * patchSize;
-      const yi = 0; // ground level
+      let xi: number, yi: number, zi: number;
+      if (sampled) {
+        xi = sampled.positions[i * 3];
+        yi = sampled.positions[i * 3 + 1];
+        zi = sampled.positions[i * 3 + 2];
+        tmpNormal
+          .set(
+            sampled.normals[i * 3],
+            sampled.normals[i * 3 + 1],
+            sampled.normals[i * 3 + 2]
+          )
+          .normalize();
+      } else {
+        xi = (Math.random() - 0.5) * patchSize;
+        zi = (Math.random() - 0.5) * patchSize;
+        yi = 0;
+        tmpNormal.set(0, 1, 0);
+      }
       offsets[i * 3 + 0] = xi;
-      offsets[i * 3 + 1] = yi;
+      offsets[i * 3 + 1] = yi!;
       offsets[i * 3 + 2] = zi;
-      scales[i] = 0.6 + Math.random() * 0.9; // variation height
-      sway[i] = Math.random() * Math.PI * 2; // phase offset
+      scales[i] = 0.6 + Math.random() * 0.9;
+      sway[i] = Math.random() * Math.PI * 2;
+      quaternionFromUpToNormal(tmpNormal, quat);
+      quats[i * 4 + 0] = quat.x;
+      quats[i * 4 + 1] = quat.y;
+      quats[i * 4 + 2] = quat.z;
+      quats[i * 4 + 3] = quat.w;
     }
     instGeom.setAttribute(
       "aOffset",
@@ -69,9 +113,15 @@ export const Grass: React.FC = () => {
       "aPhase",
       new THREE.InstancedBufferAttribute(sway, 1)
     );
+    instGeom.setAttribute(
+      "aQuat",
+      new THREE.InstancedBufferAttribute(quats, 4)
+    );
     instGeom.instanceCount = bladeCount;
 
-    const uniforms: GrassMaterialUniforms = {
+    const uniforms: GrassMaterialUniforms & {
+      uFollowNormals: { value: number };
+    } = {
       uTime: { value: 0 },
       uWindStrength: { value: windStrength },
       uBladeHeight: { value: bladeHeight },
@@ -80,11 +130,12 @@ export const Grass: React.FC = () => {
       uColorBottom: { value: new THREE.Color(colorBottom) },
       uColorTop: { value: new THREE.Color(colorTop) },
       uCurvature: { value: curvature },
+      uFollowNormals: { value: followNormals ? 1 : 0 },
     };
 
     return { geometry: instGeom, uniforms };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bladeCount, patchSize]);
+  }, [bladeCount, patchSize, sourceGeometry]);
 
   // Update dynamic uniforms from store
   useEffect(() => {
@@ -115,6 +166,10 @@ export const Grass: React.FC = () => {
     if (materialRef.current)
       materialRef.current.uniforms.uCurvature.value = curvature;
   }, [curvature]);
+  useEffect(() => {
+    if (materialRef.current)
+      materialRef.current.uniforms.uFollowNormals.value = followNormals ? 1 : 0;
+  }, [followNormals]);
 
   useFrame((_, delta) => {
     clockRef.current += delta * timeScale;
@@ -130,7 +185,7 @@ export const Grass: React.FC = () => {
         frustumCulled={false}
         rotation={[0, 0, 0]}
       >
-        <shaderMaterial
+        <rawShaderMaterial
           ref={materialRef}
           vertexShader={vertexShader}
           fragmentShader={fragmentShader}
@@ -139,10 +194,12 @@ export const Grass: React.FC = () => {
         />
       </mesh>
       {/* Ground */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[patchSize, patchSize, 1, 1]} />
-        <meshStandardMaterial color={colorBottom} />
-      </mesh>
+      {!sourceGeometry && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <planeGeometry args={[patchSize, patchSize, 1, 1]} />
+          <meshStandardMaterial color={colorBottom} />
+        </mesh>
+      )}
     </group>
   );
 };

@@ -11,6 +11,8 @@ export interface ControlState {
   colorBottom: string; // hex
   colorTop: string; // hex
   curvature: number;
+  distribution: 'plane' | 'sphere' | 'torus';
+  followNormals: boolean;
   set: (partial: Partial<ControlState>) => void;
 }
 
@@ -25,5 +27,7 @@ export const useControls = create<ControlState>((set) => ({
   colorBottom: '#2d6b18',
   colorTop: '#b4ff6b',
   curvature: 0.25,
+  distribution: 'plane',
+  followNormals: true,
   set: (partial) => set(partial)
 }));

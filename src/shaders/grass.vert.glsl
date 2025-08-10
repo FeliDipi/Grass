@@ -1,8 +1,14 @@
+precision highp float;
+// RawShaderMaterial: must declare built-ins we reference
+attribute vec3 position;
+attribute vec3 normal;
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
 // Grass Vertex Shader
-// Attributes
 attribute vec3 aOffset;
 attribute float aScale;
 attribute float aPhase;
+attribute vec4 aQuat; // orientation quaternion
 
 uniform float uTime;
 uniform float uWindStrength;
@@ -10,6 +16,7 @@ uniform float uBladeHeight;
 uniform float uNoiseFreq;
 uniform float uNoiseAmp;
 uniform float uCurvature; // horizontal curvature
+uniform float uFollowNormals; // 0 or 1 toggle
 
 varying float vProgress;
 varying float vShade;
@@ -31,32 +38,34 @@ float noise(vec2 p) {
 }
 
 void main() {
-  // base position of vertex within a blade (plane y from 0 to 1)
+  // Local (upright) blade space
   vec3 pos = position;
-  float progress = clamp(pos.y, 0.0, 1.0); // 0 bottom,1 tip
+  float progress = clamp(pos.y, 0.0, 1.0);
   vProgress = progress;
 
-  // Height scaling
+  // Height and static curvature
   pos.y *= uBladeHeight * aScale;
-
-  // Lateral curvature (static bend)
   float curve = uCurvature * progress * progress;
   pos.x += curve;
 
-  // Wind sway (dynamic)
+  // Wind sway in local X/Z (before orientation) so it's always active
   float t = uTime + aPhase;
   float sway = sin(t * 1.3 + aOffset.x * 0.2) + cos(t * 0.7 + aOffset.z * 0.15);
-  sway *= uWindStrength * (progress * progress); // tip moves more
+  sway *= uWindStrength * (progress * progress);
   pos.x += sway * 0.4;
   pos.z += sway * 0.15;
 
-  // Procedural noise for shading & subtle jaggedness
+  // Noise jitter (local lateral)
   float n = noise(vec2(aOffset.x, aOffset.z) * uNoiseFreq + progress * 4.0 + uTime * 0.1);
-  pos.xz += (n - 0.5) * uNoiseAmp * progress;
   vShade = n;
+  pos.xz += (n - 0.5) * uNoiseAmp * progress;
 
-  // World position
-  vec3 worldPos = pos + aOffset; // offset on ground plane
+  // Rotate whole blade (with wind) to match surface normal
+  if (uFollowNormals > 0.5) {
+    vec3 qv = cross(aQuat.xyz, pos) + aQuat.w * pos;
+    pos = pos + 2.0 * cross(aQuat.xyz, qv);
+  }
 
+  vec3 worldPos = pos + aOffset;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPos, 1.0);
 }

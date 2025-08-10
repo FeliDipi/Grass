@@ -16,7 +16,7 @@ export function setupGUI() {
   gui.addColor(store, 'colorBottom').name('Color Bottom').onChange(update('colorBottom'));
   gui.addColor(store, 'colorTop').name('Color Top').onChange(update('colorTop'));
   gui.add(store, 'curvature', 0, 1, 0.01).name('Curvature').onChange(update('curvature'));
-  const info = { note: () => window.open('https://threejs.org/') };
-  gui.add(info, 'note').name('Three.js Site');
+  gui.add(store, 'distribution', { Plane: 'plane', Sphere: 'sphere', Torus: 'torus' }).name('Distribution').onChange(update('distribution'));
+  gui.add(store, 'followNormals').name('Follow Normals').onChange(update('followNormals'));
   return gui;
 }
