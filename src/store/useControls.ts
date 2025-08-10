@@ -15,7 +15,7 @@ export interface ControlState {
 }
 
 export const useControls = create<ControlState>((set) => ({
-  bladeCount: 12000,
+  bladeCount: 40000,
   patchSize: 30,
   bladeHeight: 1.2,
   windStrength: 0.6,

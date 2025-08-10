@@ -1,23 +1,8 @@
-import React from 'react';
-import { CanvasScene } from './components/CanvasScene';
-import { useControls } from './store/useControls';
-
-const Overlay: React.FC = () => {
-  const bladeCount = useControls(s => s.bladeCount);
-  return (
-    <div className="overlay">
-      Grass blades: {bladeCount}
-    </div>
-  );
-};
+import React from "react";
+import { CanvasScene } from "./components/CanvasScene";
 
 const App: React.FC = () => {
-  return (
-    <>
-      <Overlay />
-      <CanvasScene />
-    </>
-  );
+  return <CanvasScene />;
 };
 
 export default App;
