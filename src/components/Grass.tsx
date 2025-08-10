@@ -50,7 +50,8 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
   const parentQuatRef = useRef(new THREE.Quaternion());
 
   const { geometry, uniforms } = useMemo(() => {
-    // Base blade geometry: narrow plane with subdivisions along Y for bending.
+    clockRef.current = 0;
+
     const baseBlade = new THREE.PlaneGeometry(0.08, 1, 1, 4);
     baseBlade.translate(0, 0.5, 0); // base at y=0
 
@@ -134,7 +135,7 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
       uWaveDir: { value: THREE.Vector2 };
       uWaveBlend: { value: number };
     } = {
-      uTime: { value: 0 },
+      uTime: { value: clockRef.current },
       uWindStrength: { value: windStrength },
       uBladeHeight: { value: bladeHeight },
       uNoiseFreq: { value: noiseFreq },
@@ -216,7 +217,11 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
 
       // Recompute wave direction considering parent rotation
       const angleRad = (waveDirectionDeg * Math.PI) / 180;
-      const base = waveDirBaseRef.current.set(Math.cos(angleRad), 0, Math.sin(angleRad));
+      const base = waveDirBaseRef.current.set(
+        Math.cos(angleRad),
+        0,
+        Math.sin(angleRad)
+      );
       if (meshRef.current?.parent) {
         meshRef.current.parent.getWorldQuaternion(parentQuatRef.current);
         base.applyQuaternion(parentQuatRef.current);
