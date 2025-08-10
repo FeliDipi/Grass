@@ -23,6 +23,5 @@ export function setupGUI() {
   wave.add(store, 'waveAmp', 0, 4, 0.01).name('Amplitude').onChange(update('waveAmp'));
   wave.add(store, 'waveLength', 1, 120, 0.5).name('Length').onChange(update('waveLength'));
   wave.add(store, 'waveSpeed', 0, 2, 0.01).name('Speed').onChange(update('waveSpeed'));
-  wave.add(store, 'waveDirectionDeg', 0, 360, 1).name('Direction').onChange(update('waveDirectionDeg'));
   return gui;
 }

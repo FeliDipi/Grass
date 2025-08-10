@@ -37,15 +37,17 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
     curvature,
     timeScale,
     followNormals,
-  waveAmp,
-  waveLength,
-  waveSpeed,
-  waveDirectionDeg,
-  waveBlend,
+    waveAmp,
+    waveLength,
+    waveSpeed,
+    waveDirectionDeg,
+    waveBlend,
   } = useControls();
   const meshRef = useRef<THREE.Mesh>(null!);
   const materialRef = useRef<THREE.RawShaderMaterial>(null!);
   const clockRef = useRef(0);
+  const waveDirBaseRef = useRef(new THREE.Vector3());
+  const parentQuatRef = useRef(new THREE.Quaternion());
 
   const { geometry, uniforms } = useMemo(() => {
     // Base blade geometry: narrow plane with subdivisions along Y for bending.
@@ -144,7 +146,12 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
       uWaveAmp: { value: waveAmp },
       uWaveLength: { value: waveLength },
       uWaveSpeed: { value: waveSpeed },
-      uWaveDir: { value: new THREE.Vector2(Math.cos((waveDirectionDeg * Math.PI)/180), Math.sin((waveDirectionDeg * Math.PI)/180)) },
+      uWaveDir: {
+        value: new THREE.Vector2(
+          Math.cos((waveDirectionDeg * Math.PI) / 180),
+          Math.sin((waveDirectionDeg * Math.PI) / 180)
+        ),
+      },
       uWaveBlend: { value: waveBlend },
     };
 
@@ -185,26 +192,45 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
     if (materialRef.current)
       materialRef.current.uniforms.uFollowNormals.value = followNormals ? 1 : 0;
   }, [followNormals]);
-  useEffect(() => { if(materialRef.current) materialRef.current.uniforms.uWaveAmp.value = waveAmp; }, [waveAmp]);
-  useEffect(() => { if(materialRef.current) materialRef.current.uniforms.uWaveLength.value = waveLength; }, [waveLength]);
-  useEffect(() => { if(materialRef.current) materialRef.current.uniforms.uWaveSpeed.value = waveSpeed; }, [waveSpeed]);
-  useEffect(() => { if(materialRef.current) materialRef.current.uniforms.uWaveDir.value.set(Math.cos((waveDirectionDeg * Math.PI)/180), Math.sin((waveDirectionDeg * Math.PI)/180)); }, [waveDirectionDeg]);
-  useEffect(() => { if(materialRef.current) materialRef.current.uniforms.uWaveBlend.value = waveBlend; }, [waveBlend]);
+  useEffect(() => {
+    if (materialRef.current)
+      materialRef.current.uniforms.uWaveAmp.value = waveAmp;
+  }, [waveAmp]);
+  useEffect(() => {
+    if (materialRef.current)
+      materialRef.current.uniforms.uWaveLength.value = waveLength;
+  }, [waveLength]);
+  useEffect(() => {
+    if (materialRef.current)
+      materialRef.current.uniforms.uWaveSpeed.value = waveSpeed;
+  }, [waveSpeed]);
+  useEffect(() => {
+    if (materialRef.current)
+      materialRef.current.uniforms.uWaveBlend.value = waveBlend;
+  }, [waveBlend]);
 
   useFrame((_, delta) => {
     clockRef.current += delta * timeScale;
-    if (materialRef.current)
+    if (materialRef.current) {
       materialRef.current.uniforms.uTime.value = clockRef.current;
+
+      // Recompute wave direction considering parent rotation
+      const angleRad = (waveDirectionDeg * Math.PI) / 180;
+      const base = waveDirBaseRef.current.set(Math.cos(angleRad), 0, Math.sin(angleRad));
+      if (meshRef.current?.parent) {
+        meshRef.current.parent.getWorldQuaternion(parentQuatRef.current);
+        base.applyQuaternion(parentQuatRef.current);
+      }
+      // Project to XZ plane and normalize
+      base.y = 0;
+      if (base.lengthSq() > 1e-6) base.normalize();
+      materialRef.current.uniforms.uWaveDir.value.set(base.x, base.z);
+    }
   });
 
   return (
-    <group>
-      <mesh
-        ref={meshRef}
-        geometry={geometry}
-        frustumCulled={false}
-        rotation={[0, 0, 0]}
-      >
+    <group rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh ref={meshRef} geometry={geometry} frustumCulled={false}>
         <rawShaderMaterial
           ref={materialRef}
           vertexShader={vertexShader}
@@ -213,13 +239,14 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
           side={THREE.DoubleSide}
         />
       </mesh>
-      {/* Ground */}
-      {!sourceGeometry && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[patchSize, patchSize, 1, 1]} />
-          <meshStandardMaterial color={colorBottom} />
-        </mesh>
-      )}
+
+      <mesh geometry={sourceGeometry!} receiveShadow castShadow>
+        <meshStandardMaterial
+          color={colorBottom}
+          roughness={0.9}
+          metalness={0.0}
+        />
+      </mesh>
     </group>
   );
 };
