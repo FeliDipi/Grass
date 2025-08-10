@@ -82,7 +82,7 @@ export const Grass: React.FC = () => {
 
   return (
     <group>
-      <mesh ref={meshRef} geometry={geometry} frustumCulled={false} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh ref={meshRef} geometry={geometry} frustumCulled={false} rotation={[0, 0, 0]}>
         <shaderMaterial
           ref={materialRef}
           vertexShader={vertexShader}
