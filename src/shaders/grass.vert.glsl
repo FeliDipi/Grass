@@ -17,6 +17,11 @@ uniform float uNoiseFreq;
 uniform float uNoiseAmp;
 uniform float uCurvature; // horizontal curvature
 uniform float uFollowNormals; // 0 or 1 toggle
+uniform float uWaveAmp;
+uniform float uWaveLength;
+uniform float uWaveSpeed;
+uniform vec2 uWaveDir; // normalized direction in XZ
+uniform float uWaveBlend; // 0-1 blend between local turbulence and macro wave
 
 varying float vProgress;
 varying float vShade;
@@ -48,12 +53,20 @@ void main() {
   float curve = uCurvature * progress * progress;
   pos.x += curve;
 
-  // Wind sway in local X/Z (before orientation) so it's always active
+  // Local turbulent sway
   float t = uTime + aPhase;
-  float sway = sin(t * 1.3 + aOffset.x * 0.2) + cos(t * 0.7 + aOffset.z * 0.15);
-  sway *= uWindStrength * (progress * progress);
-  pos.x += sway * 0.4;
-  pos.z += sway * 0.15;
+  float localSway = sin(t * 1.3 + aOffset.x * 0.2) + cos(t * 0.7 + aOffset.z * 0.15);
+  localSway *= uWindStrength * (progress * progress);
+  pos.x += localSway * 0.4;
+  pos.z += localSway * 0.15;
+
+  // Macro traveling wave along uWaveDir across world XZ
+  vec2 dir = normalize(uWaveDir);
+  float phaseCoord = (aOffset.x * dir.x + aOffset.z * dir.y) / max(uWaveLength, 0.0001);
+  float wave = sin(phaseCoord * 6.28318 - uTime * uWaveSpeed) * uWaveAmp * progress;
+  // Blend macro wave with local sway (adds lateral displacement mainly in perpendicular axis)
+  vec2 perp = vec2(-dir.y, dir.x);
+  pos.xz += perp * wave * uWaveBlend;
 
   // Noise jitter (local lateral)
   float n = noise(vec2(aOffset.x, aOffset.z) * uNoiseFreq + progress * 4.0 + uTime * 0.1);

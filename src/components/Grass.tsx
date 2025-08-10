@@ -37,6 +37,11 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
     curvature,
     timeScale,
     followNormals,
+  waveAmp,
+  waveLength,
+  waveSpeed,
+  waveDirectionDeg,
+  waveBlend,
   } = useControls();
   const meshRef = useRef<THREE.Mesh>(null!);
   const materialRef = useRef<THREE.RawShaderMaterial>(null!);
@@ -121,6 +126,11 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
 
     const uniforms: GrassMaterialUniforms & {
       uFollowNormals: { value: number };
+      uWaveAmp: { value: number };
+      uWaveLength: { value: number };
+      uWaveSpeed: { value: number };
+      uWaveDir: { value: THREE.Vector2 };
+      uWaveBlend: { value: number };
     } = {
       uTime: { value: 0 },
       uWindStrength: { value: windStrength },
@@ -131,6 +141,11 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
       uColorTop: { value: new THREE.Color(colorTop) },
       uCurvature: { value: curvature },
       uFollowNormals: { value: followNormals ? 1 : 0 },
+      uWaveAmp: { value: waveAmp },
+      uWaveLength: { value: waveLength },
+      uWaveSpeed: { value: waveSpeed },
+      uWaveDir: { value: new THREE.Vector2(Math.cos((waveDirectionDeg * Math.PI)/180), Math.sin((waveDirectionDeg * Math.PI)/180)) },
+      uWaveBlend: { value: waveBlend },
     };
 
     return { geometry: instGeom, uniforms };
@@ -170,6 +185,11 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
     if (materialRef.current)
       materialRef.current.uniforms.uFollowNormals.value = followNormals ? 1 : 0;
   }, [followNormals]);
+  useEffect(() => { if(materialRef.current) materialRef.current.uniforms.uWaveAmp.value = waveAmp; }, [waveAmp]);
+  useEffect(() => { if(materialRef.current) materialRef.current.uniforms.uWaveLength.value = waveLength; }, [waveLength]);
+  useEffect(() => { if(materialRef.current) materialRef.current.uniforms.uWaveSpeed.value = waveSpeed; }, [waveSpeed]);
+  useEffect(() => { if(materialRef.current) materialRef.current.uniforms.uWaveDir.value.set(Math.cos((waveDirectionDeg * Math.PI)/180), Math.sin((waveDirectionDeg * Math.PI)/180)); }, [waveDirectionDeg]);
+  useEffect(() => { if(materialRef.current) materialRef.current.uniforms.uWaveBlend.value = waveBlend; }, [waveBlend]);
 
   useFrame((_, delta) => {
     clockRef.current += delta * timeScale;
