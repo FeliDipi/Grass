@@ -1,0 +1,29 @@
+import { create } from 'zustand';
+
+export interface ControlState {
+  bladeCount: number;
+  patchSize: number;
+  bladeHeight: number;
+  windStrength: number;
+  timeScale: number;
+  noiseFreq: number;
+  noiseAmp: number;
+  colorBottom: string; // hex
+  colorTop: string; // hex
+  curvature: number;
+  set: (partial: Partial<ControlState>) => void;
+}
+
+export const useControls = create<ControlState>((set) => ({
+  bladeCount: 12000,
+  patchSize: 30,
+  bladeHeight: 1.2,
+  windStrength: 0.6,
+  timeScale: 1.0,
+  noiseFreq: 0.9,
+  noiseAmp: 0.4,
+  colorBottom: '#2d6b18',
+  colorTop: '#b4ff6b',
+  curvature: 0.25,
+  set: (partial) => set(partial)
+}));
