@@ -16,7 +16,7 @@ export function setupGUI() {
   gui.addColor(store, 'colorBottom').name('Color Bottom').onChange(update('colorBottom'));
   gui.addColor(store, 'colorTop').name('Color Top').onChange(update('colorTop'));
   gui.add(store, 'curvature', 0, 1, 0.01).name('Curvature').onChange(update('curvature'));
-  gui.add(store, 'distribution', { Plane: 'plane', Sphere: 'sphere', Torus: 'torus' }).name('Distribution').onChange(update('distribution'));
+  gui.add(store, 'distribution', { Plane: 'plane', Sphere: 'sphere', Torus: 'torus', Custom: 'custom' }).name('Distribution').onChange(update('distribution'));
   gui.add(store, 'followNormals').name('Follow Normals').onChange(update('followNormals'));
   const wave = gui.addFolder('Wave Wind');
   wave.add(store, 'waveBlend', 0, 1, 0.01).name('Blend').onChange(update('waveBlend'));

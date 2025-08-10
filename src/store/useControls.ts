@@ -11,7 +11,7 @@ export interface ControlState {
   colorBottom: string; // hex
   colorTop: string; // hex
   curvature: number;
-  distribution: 'plane' | 'sphere' | 'torus';
+  distribution: 'plane' | 'sphere' | 'torus' | 'custom';
   followNormals: boolean;
   waveAmp: number;
   waveLength: number;
@@ -22,17 +22,17 @@ export interface ControlState {
 }
 
 export const useControls = create<ControlState>((set) => ({
-  bladeCount: 40000,
+  bladeCount: 12500,
   patchSize: 30,
-  bladeHeight: 1.2,
+  bladeHeight: 0.5,
   windStrength: 0.6,
   timeScale: 1.0,
   noiseFreq: 0.9,
   noiseAmp: 0.4,
-  colorBottom: '#2d6b18',
-  colorTop: '#b4ff6b',
+  colorBottom: '#172f0f',
+  colorTop: '#5db65f',
   curvature: 0.25,
-  distribution: 'plane',
+  distribution: 'custom',
   followNormals: true,
   waveAmp: 0.8,        // stronger default wave
   waveLength: 40,      // longer wavelength => lower frequency

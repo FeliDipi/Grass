@@ -229,7 +229,7 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
   });
 
   return (
-    <group rotation={[-Math.PI / 2, 0, 0]}>
+    <group>
       <mesh ref={meshRef} geometry={geometry} frustumCulled={false}>
         <rawShaderMaterial
           ref={materialRef}
