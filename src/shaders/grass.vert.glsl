@@ -60,13 +60,11 @@ void main() {
   pos.x += localSway * 0.4;
   pos.z += localSway * 0.15;
 
-  // Macro traveling wave along uWaveDir across world XZ
+  // Macro traveling wave along uWaveDir (angle around Y) – displacement applied along the same direction
   vec2 dir = normalize(uWaveDir);
-  float phaseCoord = (aOffset.x * dir.x + aOffset.z * dir.y) / max(uWaveLength, 0.0001);
+  float phaseCoord = dot(aOffset.xz, dir) / max(uWaveLength, 0.0001);
   float wave = sin(phaseCoord * 6.28318 - uTime * uWaveSpeed) * uWaveAmp * progress;
-  // Blend macro wave with local sway (adds lateral displacement mainly in perpendicular axis)
-  vec2 perp = vec2(-dir.y, dir.x);
-  pos.xz += perp * wave * uWaveBlend;
+  pos.xz += dir * wave * uWaveBlend;
 
   // Noise jitter (local lateral)
   float n = noise(vec2(aOffset.x, aOffset.z) * uNoiseFreq + progress * 4.0 + uTime * 0.1);

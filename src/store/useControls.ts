@@ -34,8 +34,8 @@ export const useControls = create<ControlState>((set) => ({
   curvature: 0.25,
   distribution: 'plane',
   followNormals: true,
-  waveAmp: 0.4,
-  waveLength: 12,
+  waveAmp: 0.8,        // stronger default wave
+  waveLength: 40,      // longer wavelength => lower frequency
   waveSpeed: 0.18,
   waveDirectionDeg: 35,
   waveBlend: 1,
