@@ -89,7 +89,11 @@ export const CanvasScene: React.FC = () => {
       <Grass sourceGeometry={sourceGeometry || undefined} />
       <OrbitControls makeDefault enableDamping />
       <StatsGl />
-      <ContactShadows position={[0, -1, 0]} width={patchSize} height={patchSize} />
+      <ContactShadows
+        position={[0, -1, 0]}
+        width={patchSize}
+        height={patchSize}
+      />
     </Canvas>
   );
 };

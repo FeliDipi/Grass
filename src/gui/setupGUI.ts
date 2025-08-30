@@ -32,7 +32,7 @@ export function setupGUI() {
     const uniforms = (window as any).__grassUniforms as any;
     if (uniforms) uniforms.uInteractorEnabled.value = v ? 1 : 0;
   });
-  inter.add({ radius: 1.5 }, 'radius', 0, 5, 0.01).name('Radius').onChange((v: number) => {
+  inter.add({ radius: 5 }, 'radius', 0, 5, 0.01).name('Radius').onChange((v: number) => {
     const uniforms = (window as any).__grassUniforms as any;
     if (uniforms) uniforms.uInteractorRadius.value = v;
   });
