@@ -60,6 +60,10 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
         uWaveSpeed: { value: number };
         uWaveDir: { value: THREE.Vector2 };
         uWaveBlend: { value: number };
+  uInteractorPos: { value: THREE.Vector3 };
+  uInteractorRadius: { value: number };
+  uInteractorStrength: { value: number };
+  uInteractorEnabled: { value: number };
       })
     | null
   >(null);
@@ -84,7 +88,14 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
         ),
       },
       uWaveBlend: { value: waveBlend },
+  uInteractorPos: { value: new THREE.Vector3(0, 0, 0) },
+      uInteractorRadius: { value: 1.5 },
+      uInteractorStrength: { value: 1.25 },
+      uInteractorEnabled: { value: 1 },
     };
+  // Expose for GUI direct edits (radius/strength/enabled)
+  ;(window as any).__grassUniforms = uniformsRef.current;
+    (window as any).__grassInteractEnabled = true;
   }
 
   const geometry = useMemo(() => {
@@ -282,7 +293,29 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
         />
       </mesh>
       {sourceGeometry ? (
-        <mesh geometry={sourceGeometry} receiveShadow castShadow>
+    <mesh
+          geometry={sourceGeometry}
+          receiveShadow
+          castShadow
+          onPointerMove={(e) => {
+            e.stopPropagation();
+      if (!uniformsRef.current) return;
+      if ((window as any).__grassInteractEnabled === false) return;
+            uniformsRef.current.uInteractorEnabled.value = 1;
+            uniformsRef.current.uInteractorPos.value.copy(e.point);
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+      if (!uniformsRef.current) return;
+      if ((window as any).__grassInteractEnabled === false) return;
+            uniformsRef.current.uInteractorEnabled.value = 1;
+            uniformsRef.current.uInteractorPos.value.copy(e.point);
+          }}
+          onPointerLeave={() => {
+            if (!uniformsRef.current) return;
+      uniformsRef.current.uInteractorEnabled.value = 0;
+          }}
+        >
           <meshStandardMaterial
             color={colorBottom}
             roughness={0.9}
@@ -290,7 +323,28 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
           />
         </mesh>
       ) : (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+    <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          receiveShadow
+          onPointerMove={(e) => {
+            e.stopPropagation();
+            if (!uniformsRef.current) return;
+      if ((window as any).__grassInteractEnabled === false) return;
+            uniformsRef.current.uInteractorEnabled.value = 1;
+            uniformsRef.current.uInteractorPos.value.copy(e.point);
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            if (!uniformsRef.current) return;
+      if ((window as any).__grassInteractEnabled === false) return;
+            uniformsRef.current.uInteractorEnabled.value = 1;
+            uniformsRef.current.uInteractorPos.value.copy(e.point);
+          }}
+          onPointerLeave={() => {
+            if (!uniformsRef.current) return;
+            uniformsRef.current.uInteractorEnabled.value = 0;
+          }}
+        >
           <planeGeometry args={[patchSize, patchSize, 1, 1]} />
           <meshStandardMaterial color={colorBottom} roughness={0.95} />
         </mesh>

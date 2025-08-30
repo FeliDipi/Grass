@@ -23,6 +23,12 @@ uniform float uWaveSpeed;
 uniform vec2 uWaveDir; // normalized direction in XZ
 uniform float uWaveBlend; // 0-1 blend between local turbulence and macro wave
 
+// Interaction (mouse/touch) uniforms
+uniform vec3 uInteractorPos;      // world-space position of interaction
+uniform float uInteractorRadius;  // radius of influence in world units
+uniform float uInteractorStrength;// 0..1 strength of effect
+uniform float uInteractorEnabled; // 0 or 1
+
 varying float vProgress;
 varying float vShade;
 
@@ -40,6 +46,11 @@ float noise(vec2 p) {
   float d = hash21(i + vec2(1.0, 1.0));
   vec2 u = f * f * (3.0 - 2.0 * f);
   return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+
+// Rotate a vector by quaternion q
+vec3 quatRotate(vec4 q, vec3 v) {
+  return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
 }
 
 void main() {
@@ -75,6 +86,27 @@ void main() {
   if (uFollowNormals > 0.5) {
     vec3 qv = cross(aQuat.xyz, pos) + aQuat.w * pos;
     pos = pos + 2.0 * cross(aQuat.xyz, qv);
+  }
+
+  // Apply pointer/touch interaction: circular influence around hit point on surface tangent plane
+  if (uInteractorEnabled > 0.5 && uInteractorRadius > 0.0) {
+    // Base world position (blade base)
+    vec3 baseWorld = aOffset;
+    // Per-instance surface normal from quaternion
+    vec3 N = normalize(quatRotate(aQuat, vec3(0.0, 1.0, 0.0)));
+    // Vector from interactor to blade base
+    vec3 d = baseWorld - uInteractorPos;
+    // Project onto tangent plane at the blade base
+    vec3 tangentDelta = d - N * dot(d, N);
+    float dist = length(tangentDelta);
+    // Smooth circular falloff
+    float infl = 1.0 - smoothstep(0.0, uInteractorRadius, dist);
+    infl *= uInteractorStrength;
+    // Safe normalized lateral direction in the tangent plane
+    vec3 dir3 = (dist > 1e-5) ? (tangentDelta / dist) : vec3(0.0);
+    // Lateral bend and flattening along the blade's up (already aligned to N after rotation)
+    pos += dir3 * (infl * 0.35) * progress;
+    pos.y *= (1.0 - infl * 0.45 * progress);
   }
 
   vec3 worldPos = pos + aOffset;

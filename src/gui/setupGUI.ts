@@ -25,5 +25,20 @@ export function setupGUI() {
   wave.add(store, 'waveAmp', 0, 4, 0.01).name('Amplitude').onChange(update('waveAmp'));
   wave.add(store, 'waveLength', 1, 120, 0.5).name('Length').onChange(update('waveLength'));
   wave.add(store, 'waveSpeed', 0, 2, 0.01).name('Speed').onChange(update('waveSpeed'));
+  const inter = gui.addFolder('Interaction');
+  inter.add({ enabled: true }, 'enabled').name('Enabled').onChange((v: boolean) => {
+    // authoritative flag read by Grass pointer handlers each frame
+    (window as any).__grassInteractEnabled = v;
+    const uniforms = (window as any).__grassUniforms as any;
+    if (uniforms) uniforms.uInteractorEnabled.value = v ? 1 : 0;
+  });
+  inter.add({ radius: 1.5 }, 'radius', 0, 5, 0.01).name('Radius').onChange((v: number) => {
+    const uniforms = (window as any).__grassUniforms as any;
+    if (uniforms) uniforms.uInteractorRadius.value = v;
+  });
+  inter.add({ strength: 1.25 }, 'strength', 0, 2, 0.01).name('Strength').onChange((v: number) => {
+    const uniforms = (window as any).__grassUniforms as any;
+    if (uniforms) uniforms.uInteractorStrength.value = v;
+  });
   return gui;
 }
