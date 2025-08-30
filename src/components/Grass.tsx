@@ -28,8 +28,8 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
   const {
     bladeCount,
     patchSize,
-  bladeHeight,
-  bladeWidth,
+    bladeHeight,
+    bladeWidth,
     windStrength,
     noiseFreq,
     noiseAmp,
@@ -43,7 +43,7 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
     waveSpeed,
     waveDirectionDeg,
     waveBlend,
-  wireframe,
+    wireframe,
   } = useControls();
   const meshRef = useRef<THREE.Mesh>(null!);
   const materialRef = useRef<THREE.RawShaderMaterial>(null!);
@@ -60,10 +60,10 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
         uWaveSpeed: { value: number };
         uWaveDir: { value: THREE.Vector2 };
         uWaveBlend: { value: number };
-  uInteractorPos: { value: THREE.Vector3 };
-  uInteractorRadius: { value: number };
-  uInteractorStrength: { value: number };
-  uInteractorEnabled: { value: number };
+        uInteractorPos: { value: THREE.Vector3 };
+        uInteractorRadius: { value: number };
+        uInteractorStrength: { value: number };
+        uInteractorEnabled: { value: number };
       })
     | null
   >(null);
@@ -88,13 +88,13 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
         ),
       },
       uWaveBlend: { value: waveBlend },
-  uInteractorPos: { value: new THREE.Vector3(0, 0, 0) },
-      uInteractorRadius: { value: 1.5 },
+      uInteractorPos: { value: new THREE.Vector3(0, 0, 0) },
+      uInteractorRadius: { value: 5 },
       uInteractorStrength: { value: 1.25 },
       uInteractorEnabled: { value: 1 },
     };
-  // Expose for GUI direct edits (radius/strength/enabled)
-  ;(window as any).__grassUniforms = uniformsRef.current;
+    // Expose for GUI direct edits (radius/strength/enabled)
+    (window as any).__grassUniforms = uniformsRef.current;
     (window as any).__grassInteractEnabled = true;
   }
 
@@ -102,27 +102,25 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
     // Minimal blade: single triangle (3 verts) -> base left, base right, tip
     const halfWidth = Math.max(0.0005, Math.min(0.5, bladeWidth * 0.5));
     const positions = new Float32Array([
-      -halfWidth, 0, 0, // v0 base left at ground
-       halfWidth, 0, 0, // v1 base right at ground
-       0,         1, 0  // v2 tip (scaled in shader by bladeHeight and aScale)
+      -halfWidth,
+      0,
+      0, // v0 base left at ground
+      halfWidth,
+      0,
+      0, // v1 base right at ground
+      0,
+      1,
+      0, // v2 tip (scaled in shader by bladeHeight and aScale)
     ]);
-    const uvs = new Float32Array([
-      0, 0,
-      1, 0,
-      0.5, 1
-    ]);
-    const normals = new Float32Array([
-      0, 0, 1,
-      0, 0, 1,
-      0, 0, 1
-    ]);
-    const index = new Uint16Array([0,1,2]);
-  const baseBlade = new THREE.BufferGeometry();
-    baseBlade.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    baseBlade.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-    baseBlade.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+    const uvs = new Float32Array([0, 0, 1, 0, 0.5, 1]);
+    const normals = new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]);
+    const index = new Uint16Array([0, 1, 2]);
+    const baseBlade = new THREE.BufferGeometry();
+    baseBlade.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    baseBlade.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+    baseBlade.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
     baseBlade.setIndex(new THREE.BufferAttribute(index, 1));
-  // Keep base at y=0 so instance offset lands the base exactly on the surface
+    // Keep base at y=0 so instance offset lands the base exactly on the surface
 
     const instGeom = new THREE.InstancedBufferGeometry();
     instGeom.index = baseBlade.index;
@@ -141,7 +139,8 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
       try {
         // If geometry carries a world matrix in userData (for external callers), clone and apply before sampling
         let geom = sourceGeometry;
-        const mw: THREE.Matrix4 | undefined = (geom as any).userData?.matrixWorld;
+        const mw: THREE.Matrix4 | undefined = (geom as any).userData
+          ?.matrixWorld;
         if (mw) {
           geom = geom.clone();
           geom.applyMatrix4(mw);
@@ -293,27 +292,27 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
         />
       </mesh>
       {sourceGeometry ? (
-    <mesh
+        <mesh
           geometry={sourceGeometry}
           receiveShadow
           castShadow
           onPointerMove={(e) => {
             e.stopPropagation();
-      if (!uniformsRef.current) return;
-      if ((window as any).__grassInteractEnabled === false) return;
+            if (!uniformsRef.current) return;
+            if ((window as any).__grassInteractEnabled === false) return;
             uniformsRef.current.uInteractorEnabled.value = 1;
             uniformsRef.current.uInteractorPos.value.copy(e.point);
           }}
           onPointerDown={(e) => {
             e.stopPropagation();
-      if (!uniformsRef.current) return;
-      if ((window as any).__grassInteractEnabled === false) return;
+            if (!uniformsRef.current) return;
+            if ((window as any).__grassInteractEnabled === false) return;
             uniformsRef.current.uInteractorEnabled.value = 1;
             uniformsRef.current.uInteractorPos.value.copy(e.point);
           }}
           onPointerLeave={() => {
             if (!uniformsRef.current) return;
-      uniformsRef.current.uInteractorEnabled.value = 0;
+            uniformsRef.current.uInteractorEnabled.value = 0;
           }}
         >
           <meshStandardMaterial
@@ -323,20 +322,20 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
           />
         </mesh>
       ) : (
-    <mesh
+        <mesh
           rotation={[-Math.PI / 2, 0, 0]}
           receiveShadow
           onPointerMove={(e) => {
             e.stopPropagation();
             if (!uniformsRef.current) return;
-      if ((window as any).__grassInteractEnabled === false) return;
+            if ((window as any).__grassInteractEnabled === false) return;
             uniformsRef.current.uInteractorEnabled.value = 1;
             uniformsRef.current.uInteractorPos.value.copy(e.point);
           }}
           onPointerDown={(e) => {
             e.stopPropagation();
             if (!uniformsRef.current) return;
-      if ((window as any).__grassInteractEnabled === false) return;
+            if ((window as any).__grassInteractEnabled === false) return;
             uniformsRef.current.uInteractorEnabled.value = 1;
             uniformsRef.current.uInteractorPos.value.copy(e.point);
           }}
