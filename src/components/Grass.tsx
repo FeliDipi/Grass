@@ -28,7 +28,8 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
   const {
     bladeCount,
     patchSize,
-    bladeHeight,
+  bladeHeight,
+  bladeWidth,
     windStrength,
     noiseFreq,
     noiseAmp,
@@ -42,6 +43,7 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
     waveSpeed,
     waveDirectionDeg,
     waveBlend,
+  wireframe,
   } = useControls();
   const meshRef = useRef<THREE.Mesh>(null!);
   const materialRef = useRef<THREE.RawShaderMaterial>(null!);
@@ -50,14 +52,17 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
   const parentQuatRef = useRef(new THREE.Quaternion());
 
   // Persistent uniforms (do not recreate on geometry changes)
-  const uniformsRef = useRef<GrassMaterialUniforms & {
-    uFollowNormals: { value: number };
-    uWaveAmp: { value: number };
-    uWaveLength: { value: number };
-    uWaveSpeed: { value: number };
-    uWaveDir: { value: THREE.Vector2 };
-    uWaveBlend: { value: number };
-  } | null>(null);
+  const uniformsRef = useRef<
+    | (GrassMaterialUniforms & {
+        uFollowNormals: { value: number };
+        uWaveAmp: { value: number };
+        uWaveLength: { value: number };
+        uWaveSpeed: { value: number };
+        uWaveDir: { value: THREE.Vector2 };
+        uWaveBlend: { value: number };
+      })
+    | null
+  >(null);
   if (!uniformsRef.current) {
     uniformsRef.current = {
       uTime: { value: 0 },
@@ -72,14 +77,41 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
       uWaveAmp: { value: waveAmp },
       uWaveLength: { value: waveLength },
       uWaveSpeed: { value: waveSpeed },
-      uWaveDir: { value: new THREE.Vector2(Math.cos((waveDirectionDeg * Math.PI)/180), Math.sin((waveDirectionDeg * Math.PI)/180)) },
-      uWaveBlend: { value: waveBlend }
+      uWaveDir: {
+        value: new THREE.Vector2(
+          Math.cos((waveDirectionDeg * Math.PI) / 180),
+          Math.sin((waveDirectionDeg * Math.PI) / 180)
+        ),
+      },
+      uWaveBlend: { value: waveBlend },
     };
   }
 
   const geometry = useMemo(() => {
-    const baseBlade = new THREE.PlaneGeometry(0.08, 1, 1, 4);
-    baseBlade.translate(0, 0.5, 0); // base at y=0
+    // Minimal blade: single triangle (3 verts) -> base left, base right, tip
+    const halfWidth = Math.max(0.0005, Math.min(0.5, bladeWidth * 0.5));
+    const positions = new Float32Array([
+      -halfWidth, 0, 0, // v0 base left at ground
+       halfWidth, 0, 0, // v1 base right at ground
+       0,         1, 0  // v2 tip (scaled in shader by bladeHeight and aScale)
+    ]);
+    const uvs = new Float32Array([
+      0, 0,
+      1, 0,
+      0.5, 1
+    ]);
+    const normals = new Float32Array([
+      0, 0, 1,
+      0, 0, 1,
+      0, 0, 1
+    ]);
+    const index = new Uint16Array([0,1,2]);
+  const baseBlade = new THREE.BufferGeometry();
+    baseBlade.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    baseBlade.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    baseBlade.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+    baseBlade.setIndex(new THREE.BufferAttribute(index, 1));
+  // Keep base at y=0 so instance offset lands the base exactly on the surface
 
     const instGeom = new THREE.InstancedBufferGeometry();
     instGeom.index = baseBlade.index;
@@ -96,7 +128,14 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
       null;
     if (sourceGeometry) {
       try {
-        sampled = sampleGeometrySurface(sourceGeometry, bladeCount);
+        // If geometry carries a world matrix in userData (for external callers), clone and apply before sampling
+        let geom = sourceGeometry;
+        const mw: THREE.Matrix4 | undefined = (geom as any).userData?.matrixWorld;
+        if (mw) {
+          geom = geom.clone();
+          geom.applyMatrix4(mw);
+        }
+        sampled = sampleGeometrySurface(geom, bladeCount);
       } catch (e) {
         console.warn("Sampling failed, falling back to plane distribution", e);
       }
@@ -153,9 +192,9 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
     );
     instGeom.instanceCount = bladeCount;
 
-  return instGeom;
+    return instGeom;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bladeCount, patchSize, sourceGeometry]);
+  }, [bladeCount, patchSize, sourceGeometry, bladeWidth]);
 
   // Update dynamic uniforms from store
   useEffect(() => {
@@ -167,44 +206,36 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
       uniformsRef.current.uBladeHeight.value = bladeHeight;
   }, [bladeHeight]);
   useEffect(() => {
-    if (uniformsRef.current)
-      uniformsRef.current.uNoiseFreq.value = noiseFreq;
+    if (uniformsRef.current) uniformsRef.current.uNoiseFreq.value = noiseFreq;
   }, [noiseFreq]);
   useEffect(() => {
-    if (uniformsRef.current)
-      uniformsRef.current.uNoiseAmp.value = noiseAmp;
+    if (uniformsRef.current) uniformsRef.current.uNoiseAmp.value = noiseAmp;
   }, [noiseAmp]);
   useEffect(() => {
     if (uniformsRef.current)
       uniformsRef.current.uColorBottom.value.set(colorBottom);
   }, [colorBottom]);
   useEffect(() => {
-    if (uniformsRef.current)
-      uniformsRef.current.uColorTop.value.set(colorTop);
+    if (uniformsRef.current) uniformsRef.current.uColorTop.value.set(colorTop);
   }, [colorTop]);
   useEffect(() => {
-    if (uniformsRef.current)
-      uniformsRef.current.uCurvature.value = curvature;
+    if (uniformsRef.current) uniformsRef.current.uCurvature.value = curvature;
   }, [curvature]);
   useEffect(() => {
     if (uniformsRef.current)
       uniformsRef.current.uFollowNormals.value = followNormals ? 1 : 0;
   }, [followNormals]);
   useEffect(() => {
-    if (uniformsRef.current)
-      uniformsRef.current.uWaveAmp.value = waveAmp;
+    if (uniformsRef.current) uniformsRef.current.uWaveAmp.value = waveAmp;
   }, [waveAmp]);
   useEffect(() => {
-    if (uniformsRef.current)
-      uniformsRef.current.uWaveLength.value = waveLength;
+    if (uniformsRef.current) uniformsRef.current.uWaveLength.value = waveLength;
   }, [waveLength]);
   useEffect(() => {
-    if (uniformsRef.current)
-      uniformsRef.current.uWaveSpeed.value = waveSpeed;
+    if (uniformsRef.current) uniformsRef.current.uWaveSpeed.value = waveSpeed;
   }, [waveSpeed]);
   useEffect(() => {
-    if (uniformsRef.current)
-      uniformsRef.current.uWaveBlend.value = waveBlend;
+    if (uniformsRef.current) uniformsRef.current.uWaveBlend.value = waveBlend;
   }, [waveBlend]);
 
   useFrame((_, delta) => {
@@ -233,6 +264,9 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
       meshRef.current.geometry.dispose();
       meshRef.current.geometry = geometry;
     }
+    if (materialRef.current) {
+      materialRef.current.wireframe = !!wireframe;
+    }
   });
 
   return (
@@ -244,14 +278,19 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
           fragmentShader={fragmentShader}
           uniforms={uniformsRef.current as any}
           side={THREE.DoubleSide}
+          wireframe={false}
         />
       </mesh>
       {sourceGeometry ? (
         <mesh geometry={sourceGeometry} receiveShadow castShadow>
-          <meshStandardMaterial color={colorBottom} roughness={0.9} metalness={0.0} />
+          <meshStandardMaterial
+            color={colorBottom}
+            roughness={0.9}
+            metalness={0.0}
+          />
         </mesh>
       ) : (
-        <mesh rotation={[-Math.PI/2,0,0]} receiveShadow>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <planeGeometry args={[patchSize, patchSize, 1, 1]} />
           <meshStandardMaterial color={colorBottom} roughness={0.95} />
         </mesh>

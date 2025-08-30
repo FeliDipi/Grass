@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, StatsGl, Sky, useGLTF } from "@react-three/drei";
+import {
+  OrbitControls,
+  StatsGl,
+  Sky,
+  useGLTF,
+  ContactShadows,
+} from "@react-three/drei";
 import { Grass } from "./Grass";
 import { setupGUI } from "../gui/setupGUI";
 import * as THREE from "three";
@@ -62,8 +68,16 @@ export const CanvasScene: React.FC = () => {
         return g;
       }
       case "plane":
-      default:
-        return new THREE.PlaneGeometry(patchSize, patchSize, 1, 1);
+      default: {
+        // Create a plane lying on the XZ ground (Y up)
+        const g = new THREE.PlaneGeometry(patchSize, patchSize, 1, 1);
+        const rot = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
+        g.applyMatrix4(rot);
+        g.computeVertexNormals();
+        g.computeBoundingSphere();
+        g.computeBoundingBox();
+        return g;
+      }
     }
   }, [distribution, patchSize, gltf]);
 
@@ -75,6 +89,7 @@ export const CanvasScene: React.FC = () => {
       <Grass sourceGeometry={sourceGeometry || undefined} />
       <OrbitControls makeDefault enableDamping />
       <StatsGl />
+      <ContactShadows position={[0, -1, 0]} width={patchSize} height={patchSize} />
     </Canvas>
   );
 };
