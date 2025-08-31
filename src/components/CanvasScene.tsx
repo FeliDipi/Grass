@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
+  AdaptiveDpr,
   OrbitControls,
+  PerformanceMonitor,
   PerspectiveCamera,
   Sky,
   Stats,
@@ -14,6 +16,8 @@ import { useControls } from "../store/useControls";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 export const CanvasScene: React.FC = () => {
+  const [dpr, setDpr] = useState<number | [number, number]>([1, 2]);
+
   useEffect(() => {
     const gui = setupGUI();
     return () => gui.destroy();
@@ -80,14 +84,41 @@ export const CanvasScene: React.FC = () => {
   }, [distribution, patchSize, gltf]);
 
   return (
-    <Canvas>
+    <Canvas
+      dpr={dpr}
+      shadows={false}
+      gl={{
+        autoClear: true,
+        powerPreference: "high-performance",
+        antialias: true,
+        alpha: false,
+        stencil: false,
+        depth: true,
+        preserveDrawingBuffer: false,
+      }}
+      aria-hidden
+      role="scene"
+      tabIndex={-1}
+    >
+      {/* Performance Monitor */}
+      <PerformanceMonitor
+        onDecline={() => setDpr(1)}
+        onIncline={() => setDpr([1, 2])}
+      />
+      <AdaptiveDpr pixelated />
+      <Stats />
+
+      {/* Illumination */}
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 15, 5]} castShadow intensity={1.2} />
       <Sky sunPosition={[50, 30, -10]} turbidity={8} mieCoefficient={0.02} />
-      <Grass sourceGeometry={sourceGeometry || undefined} />
+
+      {/* Camera Controls */}
       <OrbitControls makeDefault enableDamping target={[0, 8, 0]} />
       <PerspectiveCamera makeDefault position={[12, 15, 50]} fov={50} />
-      <Stats />
+
+      {/* Scene */}
+      <Grass sourceGeometry={sourceGeometry || undefined} />
     </Canvas>
   );
 };
