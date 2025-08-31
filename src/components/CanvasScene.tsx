@@ -25,7 +25,7 @@ export const CanvasScene: React.FC = () => {
 
   const { distribution, patchSize } = useControls();
 
-  const gltf = useGLTF("/models/rabbit.glb", true, true) as any;
+  const gltf = useGLTF(`${import.meta.env.BASE_URL}models/rabbit.glb`, true, true) as any;
 
   const sourceGeometry = useMemo(() => {
     if (distribution === "custom") {
