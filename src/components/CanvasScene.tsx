@@ -2,10 +2,10 @@ import React, { useEffect, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   OrbitControls,
-  StatsGl,
+  PerspectiveCamera,
   Sky,
+  Stats,
   useGLTF,
-  ContactShadows,
 } from "@react-three/drei";
 import { Grass } from "./Grass";
 import { setupGUI } from "../gui/setupGUI";
@@ -31,7 +31,6 @@ export const CanvasScene: React.FC = () => {
         gltf.scene.traverse((child: any) => {
           if (child.isMesh && child.geometry) {
             const cloned = child.geometry.clone();
-            // Apply world transform so sampling uses world-space surface
             cloned.applyMatrix4(child.matrixWorld);
             geometries.push(cloned);
           }
@@ -69,7 +68,6 @@ export const CanvasScene: React.FC = () => {
       }
       case "plane":
       default: {
-        // Create a plane lying on the XZ ground (Y up)
         const g = new THREE.PlaneGeometry(patchSize, patchSize, 1, 1);
         const rot = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
         g.applyMatrix4(rot);
@@ -82,18 +80,14 @@ export const CanvasScene: React.FC = () => {
   }, [distribution, patchSize, gltf]);
 
   return (
-    <Canvas shadows camera={{ position: [12, 8, 12], fov: 50 }}>
+    <Canvas>
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 15, 5]} castShadow intensity={1.2} />
       <Sky sunPosition={[50, 30, -10]} turbidity={8} mieCoefficient={0.02} />
       <Grass sourceGeometry={sourceGeometry || undefined} />
-      <OrbitControls makeDefault enableDamping />
-      <StatsGl />
-      <ContactShadows
-        position={[0, -1, 0]}
-        width={patchSize}
-        height={patchSize}
-      />
+      <OrbitControls makeDefault enableDamping target={[0, 8, 0]} />
+      <PerspectiveCamera makeDefault position={[12, 15, 50]} fov={50} />
+      <Stats />
     </Canvas>
   );
 };

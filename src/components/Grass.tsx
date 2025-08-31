@@ -18,6 +18,16 @@ interface GrassMaterialUniforms {
   uColorBottom: { value: THREE.Color };
   uColorTop: { value: THREE.Color };
   uCurvature: { value: number };
+  uFollowNormals: { value: number };
+  uWaveAmp: { value: number };
+  uWaveLength: { value: number };
+  uWaveSpeed: { value: number };
+  uWaveDir: { value: THREE.Vector2 };
+  uWaveBlend: { value: number };
+  uInteractorPos: { value: THREE.Vector3 };
+  uInteractorRadius: { value: number };
+  uInteractorStrength: { value: number };
+  uInteractorEnabled: { value: number };
 }
 
 interface GrassProps {
@@ -51,22 +61,7 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
   const waveDirBaseRef = useRef(new THREE.Vector3());
   const parentQuatRef = useRef(new THREE.Quaternion());
 
-  // Persistent uniforms (do not recreate on geometry changes)
-  const uniformsRef = useRef<
-    | (GrassMaterialUniforms & {
-        uFollowNormals: { value: number };
-        uWaveAmp: { value: number };
-        uWaveLength: { value: number };
-        uWaveSpeed: { value: number };
-        uWaveDir: { value: THREE.Vector2 };
-        uWaveBlend: { value: number };
-        uInteractorPos: { value: THREE.Vector3 };
-        uInteractorRadius: { value: number };
-        uInteractorStrength: { value: number };
-        uInteractorEnabled: { value: number };
-      })
-    | null
-  >(null);
+  const uniformsRef = useRef<GrassMaterialUniforms | null>(null);
   if (!uniformsRef.current) {
     uniformsRef.current = {
       uTime: { value: 0 },
@@ -93,24 +88,22 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
       uInteractorStrength: { value: 1.25 },
       uInteractorEnabled: { value: 1 },
     };
-    // Expose for GUI direct edits (radius/strength/enabled)
     (window as any).__grassUniforms = uniformsRef.current;
     (window as any).__grassInteractEnabled = true;
   }
 
   const geometry = useMemo(() => {
-    // Minimal blade: single triangle (3 verts) -> base left, base right, tip
     const halfWidth = Math.max(0.0005, Math.min(0.5, bladeWidth * 0.5));
     const positions = new Float32Array([
       -halfWidth,
       0,
-      0, // v0 base left at ground
+      0,
       halfWidth,
       0,
-      0, // v1 base right at ground
+      0,
       0,
       1,
-      0, // v2 tip (scaled in shader by bladeHeight and aScale)
+      0,
     ]);
     const uvs = new Float32Array([0, 0, 1, 0, 0.5, 1]);
     const normals = new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]);
@@ -120,7 +113,6 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
     baseBlade.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
     baseBlade.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
     baseBlade.setIndex(new THREE.BufferAttribute(index, 1));
-    // Keep base at y=0 so instance offset lands the base exactly on the surface
 
     const instGeom = new THREE.InstancedBufferGeometry();
     instGeom.index = baseBlade.index;
@@ -137,7 +129,6 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
       null;
     if (sourceGeometry) {
       try {
-        // If geometry carries a world matrix in userData (for external callers), clone and apply before sampling
         let geom = sourceGeometry;
         const mw: THREE.Matrix4 | undefined = (geom as any).userData
           ?.matrixWorld;
@@ -206,7 +197,6 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bladeCount, patchSize, sourceGeometry, bladeWidth]);
 
-  // Update dynamic uniforms from store
   useEffect(() => {
     if (uniformsRef.current)
       uniformsRef.current.uWindStrength.value = windStrength;
@@ -253,7 +243,6 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
     if (uniformsRef.current) {
       uniformsRef.current.uTime.value = clockRef.current;
 
-      // Recompute wave direction considering parent rotation
       const angleRad = (waveDirectionDeg * Math.PI) / 180;
       const base = waveDirBaseRef.current.set(
         Math.cos(angleRad),
@@ -264,12 +253,10 @@ export const Grass: React.FC<GrassProps> = ({ sourceGeometry = null }) => {
         meshRef.current.parent.getWorldQuaternion(parentQuatRef.current);
         base.applyQuaternion(parentQuatRef.current);
       }
-      // Project to XZ plane and normalize
       base.y = 0;
       if (base.lengthSq() > 1e-6) base.normalize();
       uniformsRef.current.uWaveDir.value.set(base.x, base.z);
     }
-    // If geometry changed, update mesh without re-instantiating material
     if (meshRef.current && meshRef.current.geometry !== geometry) {
       meshRef.current.geometry.dispose();
       meshRef.current.geometry = geometry;
