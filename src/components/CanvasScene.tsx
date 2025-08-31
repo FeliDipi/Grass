@@ -110,11 +110,11 @@ export const CanvasScene: React.FC = () => {
 
       {/* Illumination */}
       <ambientLight intensity={0.5} />
-      <directionalLight position={[10, 15, 5]} castShadow intensity={1.2} />
+      <directionalLight position={[10, 15, 5]} intensity={1.2} />
       <Sky sunPosition={[50, 30, -10]} turbidity={8} mieCoefficient={0.02} />
 
       {/* Camera Controls */}
-      <OrbitControls makeDefault enableDamping target={[0, 8, 0]} />
+      <OrbitControls enableDamping target={[0, 8, 0]} />
       <PerspectiveCamera makeDefault position={[12, 15, 50]} fov={50} />
 
       {/* Scene */}
